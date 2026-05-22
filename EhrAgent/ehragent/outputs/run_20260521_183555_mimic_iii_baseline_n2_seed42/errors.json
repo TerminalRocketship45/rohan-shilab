@@ -1,0 +1,30 @@
+[
+  {
+    "id": "191454719b23854f72264a60",
+    "question": "has patient 9474 received any diagnosis since 1 year ago?",
+    "ground_truth": "1",
+    "predicted_answer": "",
+    "is_correct": false,
+    "status": "incompleted",
+    "num_tries": 0,
+    "last_code": "",
+    "last_error": "ConversableAgent._append_oai_message() missing 1 required positional argument: 'is_sending'",
+    "agent_trace": [
+      "[INCOMPLETED: exception] ConversableAgent._append_oai_message() missing 1 required positional argument: 'is_sending'"
+    ]
+  },
+  {
+    "id": "f9cba84478f94136fdaff8f9",
+    "question": "what are the top four frequently prescribed drugs that patients were prescribed within the same hospital visit after having been diagnosed with fracture two ribs-closed?",
+    "ground_truth": "potassium chloride, magnesium sulfate, insulin, 0.9% sodium chloride, d5w, furosemide",
+    "predicted_answer": "",
+    "is_correct": false,
+    "status": "incompleted",
+    "num_tries": 0,
+    "last_code": "",
+    "last_error": "ConversableAgent._append_oai_message() missing 1 required positional argument: 'is_sending'",
+    "agent_trace": [
+      "[INCOMPLETED: exception] ConversableAgent._append_oai_message() missing 1 required positional argument: 'is_sending'"
+    ]
+  }
+]
