@@ -289,20 +289,27 @@ else:
 [SUCCESS]
 3
 
---- Example 3: PLACEHOLDER — fill after running Approach 3 baseline ---
---- Copy question, last_code, and last_error from errors.json ---
-Question: <paste question here>
+--- Example 3: Wrong GetValue operation argument → ERROR ---
+Question: count the number of patients who stayed in careunit ccu since 5 year ago.
 Code:
-<paste last_code here>
+from datetime import datetime
+five_years_ago = Calendar('-5 years')
+icustays_db = LoadDB('icustays')
+filtered_icustays_db = FilterDB(icustays_db, 'FIRST_CAREUNIT=ccu||LAST_CAREUNIT=ccu||INTIME>{}'.format(five_years_ago))
+unique_subject_ids = GetValue(filtered_icustays_db, 'SUBJECT_ID, unique')
+number_of_patients = len(unique_subject_ids)
+answer = number_of_patients
 
 [ERROR]
-<paste last_error here>
+Error: The column name SUBJECT_ID, unique is incorrect. Please check the column name and make necessary changes. The columns in this table include ROW_ID, SUBJECT_ID, HADM_ID, ICUSTAY_ID, FIRST_CAREUNIT, LAST_CAREUNIT, FIRST_WARDID, LAST_WARDID, INTIME, OUTTIME.
 
---- Example 4: PLACEHOLDER — fill after running Approach 3 baseline ---
-Question: <paste question here>
+--- Example 4: Wrong column name in FilterDB → ERROR ---
+Question: what was the total amount of dose of ranitidine that patient 24971 were prescribed in 01/2105?
 Code:
-<paste last_code here>
+patient_db = LoadDB('prescriptions')
+filtered_prescriptions_db = FilterDB(patient_db, 'SUBJECT_ID=24971||DRUG_NAME="ranitidine"||STARTDATE>="2015-01-01"||STARTDATE<="2015-01-31"')
+answer = GetValue(filtered_prescriptions_db, 'DOSE_VAL_RX, sum')
 
 [ERROR]
-<paste last_error here>
+Error: The filtering query DRUG_NAME="ranitidine" is incorrect. Please modify the column name or use LoadDB to read another table. The column names in the current DB are ROW_ID, SUBJECT_ID, HADM_ID, STARTDATE, ENDDATE, DRUG, DOSE_VAL_RX, DOSE_UNIT_RX, ROUTE.
 """

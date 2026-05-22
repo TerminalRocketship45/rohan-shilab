@@ -134,28 +134,43 @@ def run_question(user_proxy, chatbot, item, long_term_memory, num_shots):
         user_proxy.update_memory(num_shots, long_term_memory)
         user_proxy.initiate_chat(chatbot, message=question)
 
-        logs = user_proxy._oai_messages
+        logs = user_proxy.chat_messages
         trace = []
         num_tries = 0
         last_code = ""
         last_error = ""
 
+        def _extract_code(arguments):
+            """Parse function arguments to get the code cell string."""
+            if isinstance(arguments, dict):
+                return arguments.get("cell", str(arguments))
+            try:
+                parsed = json.loads(arguments)
+                return parsed.get("cell", str(parsed))
+            except Exception:
+                return str(arguments)
+
         for agent in list(logs.keys()):
             for msg in logs[agent]:
-                if msg.get("content") is not None:
-                    cleaned = strip_examples(str(msg["content"]))
+                content = msg.get("content")
+                if content is not None and content != "":
+                    cleaned = strip_examples(str(content))
                     trace.append(cleaned)
                     if "error" in cleaned.lower() or "Error" in cleaned:
                         last_error = cleaned
+                # Handle legacy function_call format
                 elif msg.get("function_call"):
-                    argums = msg["function_call"]["arguments"]
-                    if isinstance(argums, dict) and "cell" in argums:
-                        trace.append(argums["cell"])
-                        last_code = argums["cell"]
-                        num_tries += 1
-                    else:
-                        trace.append(str(argums))
-                        last_code = str(argums)
+                    code = _extract_code(msg["function_call"]["arguments"])
+                    trace.append(code)
+                    last_code = code
+                    num_tries += 1
+                # Handle tool_calls format (gpt-4o and newer)
+                elif msg.get("tool_calls"):
+                    for tc in msg["tool_calls"]:
+                        fn = tc.get("function", {})
+                        code = _extract_code(fn.get("arguments", ""))
+                        trace.append(code)
+                        last_code = code
                         num_tries += 1
 
         result["agent_trace"] = trace
@@ -276,7 +291,7 @@ def main():
         is_termination_msg=lambda x: x.get("content", "") and x.get("content", "").rstrip().endswith("TERMINATE"),
         human_input_mode="NEVER",
         max_consecutive_auto_reply=10,
-        code_execution_config={"work_dir": "coding"},
+        code_execution_config={"work_dir": "coding", "use_docker": False},
     )
     user_proxy.register_function(function_map={"python": run_code})
     user_proxy.register_dataset(args.dataset)

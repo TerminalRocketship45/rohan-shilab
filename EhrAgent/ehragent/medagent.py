@@ -91,37 +91,18 @@ class MedAgent(UserProxyAgent):
             examples.append(template)
         return "\n".join(examples)
 
-    def generate_init_message(self, **context):
+    def generate_init_message(self, message, **kwargs):
         if self.dataset == "mimic_iii":
             from prompts_mimic import EHRAgent_Message_Prompt
         else:
             from prompts_eicu import EHRAgent_Message_Prompt
-        self.question = context["message"]
-        knowledge = self.retrieve_knowledge(context["message"])
+        self.question = message
+        knowledge = self.retrieve_knowledge(message)
         self.knowledge = knowledge
-        examples = self.retrieve_examples(context["message"])
+        examples = self.retrieve_examples(message)
         return EHRAgent_Message_Prompt.format(
-            examples=examples, knowledge=knowledge, question=context["message"]
+            examples=examples, knowledge=knowledge, question=message
         )
-
-    def send(self, message, recipient, request_reply=None, silent=False):
-        valid = self._append_oai_message(message, "assistant", recipient)
-        if valid:
-            recipient.receive(message, self, request_reply, silent)
-        else:
-            raise ValueError("Message can't be converted into a valid ChatCompletion message.")
-
-    def initiate_chat(self, recipient, clear_history=True, silent=False, **context):
-        self._prepare_chat(recipient, clear_history)
-        self.send(self.generate_init_message(**context), recipient, silent=silent)
-
-    def receive(self, message, sender, request_reply=None, silent=False):
-        self._process_received_message(message, sender, silent)
-        if request_reply is False or (request_reply is None and self.reply_at_receive[sender] is False):
-            return
-        reply = self.generate_reply(messages=self.chat_messages[sender], sender=sender)
-        if reply is not None:
-            self.send(reply, sender, silent=silent)
 
     def error_debugger(self, code, error_info):
         if self.dataset == "mimic_iii":
@@ -153,7 +134,7 @@ class MedAgent(UserProxyAgent):
                 time.sleep(30)
         return "Fail to diagnose the reasons to the errors."
 
-    def execute_function(self, func_call):
+    def execute_function(self, func_call, call_id=None, verbose=False):
         func_name = func_call.get("name", "")
         func = self._function_map.get(func_name, None)
         is_exec_success = False
