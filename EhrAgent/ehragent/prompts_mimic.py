@@ -289,27 +289,28 @@ else:
 [SUCCESS]
 3
 
---- Example 3: Wrong GetValue operation argument → ERROR ---
-Question: count the number of patients who stayed in careunit ccu since 5 year ago.
+--- Example 3: Invalid FilterDB separator (&&) and SQL function → ERROR ---
+Question: count the number of patients who were in their 30s and prescribed metformin.
 Code:
-from datetime import datetime
-five_years_ago = Calendar('-5 years')
-icustays_db = LoadDB('icustays')
-filtered_icustays_db = FilterDB(icustays_db, 'FIRST_CAREUNIT=ccu||LAST_CAREUNIT=ccu||INTIME>{}'.format(five_years_ago))
-unique_subject_ids = GetValue(filtered_icustays_db, 'SUBJECT_ID, unique')
-number_of_patients = len(unique_subject_ids)
-answer = number_of_patients
+patients_db = LoadDB('patients')
+current_year = 2023
+filtered_patients_db = FilterDB(patients_db, 'YEAR(DOB) >= {} && YEAR(DOB) <= {}'.format(current_year - 39, current_year - 30))
+subject_id_list = GetValue(filtered_patients_db, 'SUBJECT_ID, list')
+prescriptions_db = LoadDB('prescriptions')
+filtered_prescriptions_db = FilterDB(prescriptions_db, 'DRUG=metformin')
+answer = len(set(GetValue(filtered_prescriptions_db, 'SUBJECT_ID, list')) & set(subject_id_list))
 
 [ERROR]
-Error: The column name SUBJECT_ID, unique is incorrect. Please check the column name and make necessary changes. The columns in this table include ROW_ID, SUBJECT_ID, HADM_ID, ICUSTAY_ID, FIRST_CAREUNIT, LAST_CAREUNIT, FIRST_WARDID, LAST_WARDID, INTIME, OUTTIME.
+Error: The filtering query YEAR(DOB) >= 1984 && YEAR(DOB) <= 1993 is incorrect. Please modify the column name or use LoadDB to read another table. FilterDB only supports '||' to join conditions, not '&&' or 'AND'. SQL functions like YEAR() are also not supported — filter on the full DOB column directly. The columns in this table are ROW_ID, SUBJECT_ID, GENDER, DOB, DOD.
 
---- Example 4: Wrong column name in FilterDB → ERROR ---
-Question: what was the total amount of dose of ranitidine that patient 24971 were prescribed in 01/2105?
+--- Example 4: SQL subquery inside FilterDB → ERROR ---
+Question: how many days since patient 55501 was first prescribed penicillin?
 Code:
-patient_db = LoadDB('prescriptions')
-filtered_prescriptions_db = FilterDB(patient_db, 'SUBJECT_ID=24971||DRUG_NAME="ranitidine"||STARTDATE>="2015-01-01"||STARTDATE<="2015-01-31"')
-answer = GetValue(filtered_prescriptions_db, 'DOSE_VAL_RX, sum')
+prescriptions_db = LoadDB('prescriptions')
+filtered_prescriptions_db = FilterDB(prescriptions_db, 'SUBJECT_ID=55501||ITEMID=(SELECT ITEMID FROM d_items WHERE LABEL="penicillin")')
+start_date = GetValue(filtered_prescriptions_db, 'STARTDATE, min')
+answer = (Calendar('current') - start_date).days
 
 [ERROR]
-Error: The filtering query DRUG_NAME="ranitidine" is incorrect. Please modify the column name or use LoadDB to read another table. The column names in the current DB are ROW_ID, SUBJECT_ID, HADM_ID, STARTDATE, ENDDATE, DRUG, DOSE_VAL_RX, DOSE_UNIT_RX, ROUTE.
+Error: The filtering query ITEMID=(SELECT ITEMID FROM d_items WHERE LABEL="penicillin") is incorrect. SQL subqueries are not supported inside FilterDB. Load the lookup table separately with LoadDB, retrieve the ITEMID with GetValue, then pass the value into FilterDB. The column names in the prescriptions table are ROW_ID, SUBJECT_ID, HADM_ID, STARTDATE, ENDDATE, DRUG, DOSE_VAL_RX, DOSE_UNIT_RX, ROUTE.
 """
