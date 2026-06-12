@@ -1,0 +1,117 @@
+# EhrAgent/ehragent/data_exploration/tests/test_explorer.py
+import sys, os, sqlite3, tempfile, json
+from unittest.mock import MagicMock
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from schema_explorer.explorer import SchemaExplorer
+
+
+def _make_ehr_db():
+    f = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    conn = sqlite3.connect(f.name)
+    conn.execute("CREATE TABLE patients (SUBJECT_ID INTEGER, GENDER TEXT, DOB TEXT)")
+    conn.execute("CREATE TABLE admissions (HADM_ID INTEGER, SUBJECT_ID INTEGER, ADMITTIME TEXT)")
+    conn.execute("INSERT INTO patients VALUES (1, 'M', '1980-01-01')")
+    conn.execute("INSERT INTO admissions VALUES (100, 1, '2020-05-01')")
+    conn.commit()
+    conn.close()
+    return f.name
+
+
+def _make_mock_anthropic(responses):
+    """responses: list of strings, returned in order from client.messages.create."""
+    mock_client = MagicMock()
+    mock_usage = MagicMock()
+    mock_usage.input_tokens = 100
+    mock_usage.output_tokens = 50
+
+    call_count = [0]
+
+    def create_side_effect(*args, **kwargs):
+        idx = call_count[0]
+        call_count[0] += 1
+        text = responses[idx % len(responses)]
+        mock_response = MagicMock()
+        mock_response.content = [MagicMock(text=text)]
+        mock_response.usage = mock_usage
+        return mock_response
+
+    mock_client.messages.create.side_effect = create_side_effect
+    return mock_client
+
+
+def test_stage1_discovers_tables():
+    db_path = _make_ehr_db()
+    cluster_response = json.dumps({
+        "clusters": {},
+        "singletons": ["patients", "admissions"]
+    })
+    followup_response = json.dumps({"needs_followup": False, "followup_queries": []})
+    schema_response = "Available tables and columns:\n- patients: SUBJECT_ID (INTEGER), GENDER (TEXT), DOB (TEXT)\n  Description: Stores patient demographics."
+
+    mock_client = _make_mock_anthropic([cluster_response, followup_response, followup_response, schema_response])
+
+    explorer = SchemaExplorer(db_path=db_path, api_key="fake")
+    explorer.client = mock_client
+
+    schema_str, trace = explorer.explore()
+
+    assert "patients" in trace["stage_1"]["all_tables"]
+    assert "admissions" in trace["stage_1"]["all_tables"]
+
+
+def test_stage3_returns_schema_string():
+    db_path = _make_ehr_db()
+    cluster_response = json.dumps({
+        "clusters": {},
+        "singletons": ["patients", "admissions"]
+    })
+    followup_response = json.dumps({"needs_followup": False, "followup_queries": []})
+    schema_response = "Available tables and columns:\n- patients: SUBJECT_ID (INTEGER)\n  Description: Patient table."
+
+    mock_client = _make_mock_anthropic([cluster_response, followup_response, followup_response, schema_response])
+
+    explorer = SchemaExplorer(db_path=db_path, api_key="fake")
+    explorer.client = mock_client
+
+    schema_str, trace = explorer.explore()
+
+    assert "patients" in schema_str
+    assert "stage_3" in trace
+    assert trace["tokens_used"] > 0
+    assert trace["api_calls"] > 0
+
+
+def test_bad_query_retried():
+    db_path = _make_ehr_db()
+    cluster_response = json.dumps({
+        "clusters": {},
+        "singletons": ["patients"]
+    })
+    followup_response = json.dumps({"needs_followup": False, "followup_queries": []})
+    schema_response = "Available tables and columns:\n- patients: SUBJECT_ID (INTEGER)\n  Description: Patients."
+
+    mock_client = _make_mock_anthropic([
+        cluster_response,
+        "SELECT * FROM patients LIMIT 3",  # rewrite response
+        followup_response,
+        schema_response,
+    ])
+
+    explorer = SchemaExplorer(db_path=db_path, api_key="fake")
+    explorer.client = mock_client
+
+    # Patch execute to fail on first LIMIT call, succeed on retry
+    original_execute = explorer.executor.execute
+    call_count = [0]
+
+    def patched_execute(sql, row_limit=20):
+        call_count[0] += 1
+        if "LIMIT 3" in sql and call_count[0] == 2:
+            return None, "no such table: bad_table"
+        return original_execute(sql, row_limit)
+
+    explorer.executor.execute = patched_execute
+    schema_str, trace = explorer.explore()
+    # Should complete without raising
+    assert trace is not None
