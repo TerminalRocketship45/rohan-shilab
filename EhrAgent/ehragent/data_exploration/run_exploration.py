@@ -36,7 +36,7 @@ warnings.filterwarnings("ignore")
 # Make data_exploration/ importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import get_openai_key, get_anthropic_key
+from config import get_openai_key, get_anthropic_key, get_provider
 from pipeline.agents import build_agents
 from pipeline.runner import run_question
 
@@ -171,7 +171,7 @@ def run_condition(
     pipeline_type, schema_mode, schema_str, questions,
     model, openai_key, seed, dataset, dataset_path,
     long_term_memory_base, run_dir, explorer_trace,
-    verbose,
+    verbose, provider="openai",
 ):
     ckey = CONDITION_KEY[(pipeline_type, schema_mode)]
     label = CONDITION_LABEL[(pipeline_type, schema_mode)]
@@ -186,6 +186,7 @@ def run_condition(
         seed=seed,
         dataset=dataset,
         dataset_path=dataset_path,
+        provider=provider,
     )
     long_term_memory = list(long_term_memory_base)
     results = []
@@ -494,8 +495,10 @@ def plot_per_question_heatmap(graphs_dir, questions, all_results):
 
 def main():
     args = parse_args()
-    openai_key = get_openai_key()
+    provider = get_provider()
+    openai_key = get_openai_key()          # returns ANTHROPIC_API_KEY when in anthropic mode
     anthropic_key = get_anthropic_key()
+    print(f"Provider: {provider} | model: {args.model}")
 
     questions = load_questions(args.dataset_path, args.dataset, args.n, args.seed)
     print(f"Loaded {len(questions)} questions | dataset={args.dataset} | model={args.model}")
@@ -559,6 +562,7 @@ def main():
                 run_dir=run_dir,
                 explorer_trace=explorer_trace,
                 verbose=True,
+                provider=provider,
             )
             all_results[ckey] = results
 

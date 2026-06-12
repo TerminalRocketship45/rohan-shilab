@@ -1,11 +1,18 @@
 import os
 
 
+def get_provider():
+    """Return 'anthropic' if only ANTHROPIC_API_KEY is set, else 'openai'."""
+    if os.environ.get("ANTHROPIC_API_KEY") and not os.environ.get("OPENAI_API_KEY"):
+        return "anthropic"
+    return "openai"
+
+
 def get_openai_key():
-    key = os.environ.get("OPENAI_API_KEY")
+    key = os.environ.get("OPENAI_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         raise EnvironmentError(
-            "OPENAI_API_KEY is not set. Run: export OPENAI_API_KEY=sk-..."
+            "No API key found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY."
         )
     return key
 
