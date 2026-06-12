@@ -1,0 +1,18 @@
+{
+  "condition": "compiler_agent__no_schema",
+  "pipeline": "compiler_agent",
+  "schema_mode": "no_schema",
+  "question_id": "ac34ae20c90427634c1b5002",
+  "question_text": "count the number of patients who stayed in careunit ccu since 5 year ago.",
+  "ground_truth": "166",
+  "status": "incompleted",
+  "is_correct": false,
+  "num_tries": 0,
+  "predicted_answer": "",
+  "last_code": "",
+  "last_error": "Error: The filtering query FIRST_CAREUNIT=CCU is incorrect. There is no CCU value in the column. Five example values in the column are ccu, csru, micu, sicu, tsicu. Please check if you get the correct FIRST_CAREUNIT value..\nPlease make modifications accordingly and make sure the rest code works well with the modification.",
+  "agent_trace": [
+    "[INCOMPLETED: compiler said SUCCESS but real exec failed]"
+  ],
+  "schema_explorer": null
+}

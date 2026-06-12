@@ -23,6 +23,7 @@ import random
 import argparse
 import re
 import warnings
+import contextlib
 from datetime import datetime
 
 import numpy as np
@@ -84,6 +85,11 @@ def parse_args():
              "Keys: compiler_agent__no_schema, compiler_agent__dataset_schema, "
              "compiler_agent__reforce_schema, baseline__no_schema, "
              "baseline__dataset_schema, baseline__reforce_schema",
+    )
+    p.add_argument(
+        "--compact_terminal",
+        action="store_true",
+        help="Suppress raw agent output and print compact per-problem progress.",
     )
     return p.parse_args()
 
@@ -171,7 +177,7 @@ def run_condition(
     pipeline_type, schema_mode, schema_str, questions,
     model, openai_key, seed, dataset, dataset_path,
     long_term_memory_base, run_dir, explorer_trace,
-    verbose, provider="openai",
+    verbose, provider="openai", compact_terminal=False,
 ):
     ckey = CONDITION_KEY[(pipeline_type, schema_mode)]
     label = CONDITION_LABEL[(pipeline_type, schema_mode)]
@@ -194,10 +200,21 @@ def run_condition(
     os.makedirs(traces_dir, exist_ok=True)
 
     for i, item in enumerate(questions):
-        if verbose:
+        if compact_terminal:
+            print(
+                f"Problem {i+1} out of {len(questions)} | {ckey} | running...",
+                end="\r",
+                flush=True,
+            )
+        elif verbose:
             print(f"  [{i+1}/{len(questions)}] {item['template'][:70]}...")
 
-        result = run_question(user_proxy, chatbot, item, long_term_memory)
+        if compact_terminal:
+            with open(os.devnull, "w") as devnull:
+                with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                    result = run_question(user_proxy, chatbot, item, long_term_memory)
+        else:
+            result = run_question(user_proxy, chatbot, item, long_term_memory)
         results.append(result)
 
         # Build trace
@@ -242,7 +259,12 @@ def run_condition(
                 "code": result["last_code"],
             })
 
-        if verbose:
+        if compact_terminal:
+            print(
+                f"Problem {i+1} out of {len(questions)} | {ckey} | "
+                f"{result['status'].upper()} | complete on try {result['num_tries']}"
+            )
+        elif verbose:
             print(f"    -> {result['status'].upper()} | tries={result['num_tries']}")
 
     correct = sum(1 for r in results if r["status"] == "correct")
@@ -563,6 +585,7 @@ def main():
                 explorer_trace=explorer_trace,
                 verbose=True,
                 provider=provider,
+                compact_terminal=args.compact_terminal,
             )
             all_results[ckey] = results
 

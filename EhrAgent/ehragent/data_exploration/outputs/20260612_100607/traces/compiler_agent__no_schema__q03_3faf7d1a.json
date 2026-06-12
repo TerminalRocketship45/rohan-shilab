@@ -1,0 +1,18 @@
+{
+  "condition": "compiler_agent__no_schema",
+  "pipeline": "compiler_agent",
+  "schema_mode": "no_schema",
+  "question_id": "3faf7d1abdb5c0d12ba85c9d",
+  "question_text": "count the number of patients who were dead after having been diagnosed with dmii wo cmp nt st uncntr within the same hospital visit since 6 year ago.",
+  "ground_truth": "51",
+  "status": "incompleted",
+  "is_correct": false,
+  "num_tries": 0,
+  "predicted_answer": "",
+  "last_code": "",
+  "last_error": "Error: Exception(\"The filtering query LONG_TITLE=dmii wo cmp nt st uncntr is incorrect. There is no dmii wo cmp nt st uncntr value in the column. Five example values in the column are ring corneal ulcer, mooren's ulcer, common truncus, mycotic corneal ulcer, diabetic cataract. Please check if you get the correct LONG_TITLE value.\").\nPlease make modifications accordingly and make sure the rest code works well with the modification.",
+  "agent_trace": [
+    "[INCOMPLETED: compiler said SUCCESS but real exec failed]"
+  ],
+  "schema_explorer": null
+}

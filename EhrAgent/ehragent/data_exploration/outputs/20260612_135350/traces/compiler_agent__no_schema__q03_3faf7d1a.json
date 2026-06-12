@@ -1,0 +1,18 @@
+{
+  "condition": "compiler_agent__no_schema",
+  "pipeline": "compiler_agent",
+  "schema_mode": "no_schema",
+  "question_id": "3faf7d1abdb5c0d12ba85c9d",
+  "question_text": "count the number of patients who were dead after having been diagnosed with dmii wo cmp nt st uncntr within the same hospital visit since 6 year ago.",
+  "ground_truth": "51",
+  "status": "incompleted",
+  "is_correct": false,
+  "num_tries": 0,
+  "predicted_answer": "",
+  "last_code": "",
+  "last_error": "Error: The column name HOSPITAL_EXPIRE_FLAG is incorrect. Please check the column name and make necessary changes. The columns in this table include ROW_ID, SUBJECT_ID, HADM_ID, ADMITTIME, DISCHTIME, ADMISSION_TYPE, ADMISSION_LOCATION, DISCHARGE_LOCATION, INSURANCE, LANGUAGE, MARITAL_STATUS, ETHNICITY, AGE..\nPlease make modifications accordingly and make sure the rest code works well with the modification.",
+  "agent_trace": [
+    "[INCOMPLETED: compiler said SUCCESS but real exec failed]"
+  ],
+  "schema_explorer": null
+}

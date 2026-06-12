@@ -1,0 +1,18 @@
+{
+  "condition": "compiler_agent__no_schema",
+  "pipeline": "compiler_agent",
+  "schema_mode": "no_schema",
+  "question_id": "2051006e3e4a944f0d948b68",
+  "question_text": "what are the top three frequent prescribed drugs for patients who were also prescribed amlodipine besylate at the same time in 2105?",
+  "ground_truth": "ns, amlodipine besylate, warfarin, iso-osmotic dextrose, dexamethasone",
+  "status": "incompleted",
+  "is_correct": false,
+  "num_tries": 0,
+  "predicted_answer": "",
+  "last_code": "",
+  "last_error": "Error: AttributeError(\"'list' object has no attribute 'columns'\").\nPlease make modifications accordingly and make sure the rest code works well with the modification.",
+  "agent_trace": [
+    "[INCOMPLETED: compiler said SUCCESS but real exec failed]"
+  ],
+  "schema_explorer": null
+}
