@@ -11,6 +11,7 @@ class SQLExecutor:
         Returns (result_dict, None) on success or (None, error_str) on failure.
         result_dict = {"columns": [...], "rows": [[...], ...]}
         """
+        conn = None
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -21,7 +22,9 @@ class SQLExecutor:
                 if cursor.description
                 else []
             )
-            conn.close()
             return {"columns": col_names, "rows": [list(r) for r in rows]}, None
         except Exception as e:
             return None, str(e)
+        finally:
+            if conn is not None:
+                conn.close()
