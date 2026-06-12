@@ -56,6 +56,9 @@ class SchemaExplorer:
 
         all_tables = [row[0] for row in result["rows"]]
 
+        if not all_tables:
+            raise RuntimeError("No tables found in database — is the path correct?")
+
         prompt = P.CLUSTER_TABLES.format(table_list=", ".join(all_tables))
         response_text = self._llm(prompt)
 

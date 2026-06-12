@@ -93,7 +93,7 @@ def test_bad_query_retried():
 
     mock_client = _make_mock_anthropic([
         cluster_response,
-        "SELECT * FROM patients LIMIT 3",  # rewrite response
+        "SELECT SUBJECT_ID, GENDER, DOB FROM patients LIMIT 3",  # rewrite with different SQL
         followup_response,
         schema_response,
     ])
@@ -101,17 +101,22 @@ def test_bad_query_retried():
     explorer = SchemaExplorer(db_path=db_path, api_key="fake")
     explorer.client = mock_client
 
-    # Patch execute to fail on first LIMIT call, succeed on retry
+    # Patch execute to fail on the first SELECT LIMIT call, succeed on retry
     original_execute = explorer.executor.execute
-    call_count = [0]
+    failed = [False]
 
     def patched_execute(sql, row_limit=20):
-        call_count[0] += 1
-        if "LIMIT 3" in sql and call_count[0] == 2:
-            return None, "no such table: bad_table"
+        if "SELECT * FROM patients LIMIT 3" in sql and not failed[0]:
+            failed[0] = True
+            return None, "simulated error: forced failure"
         return original_execute(sql, row_limit)
 
     explorer.executor.execute = patched_execute
     schema_str, trace = explorer.explore()
-    # Should complete without raising
-    assert trace is not None
+
+    # Verify retry was attempted: the stage_2 queries for patients should have 2 LIMIT entries
+    patients_stage = next(s for s in trace["stage_2"] if s["table"] == "patients")
+    limit_queries = [q for q in patients_stage["queries"] if "LIMIT" in q["sql"]]
+    assert len(limit_queries) == 2, f"Expected 2 LIMIT queries (original + retry), got {len(limit_queries)}: {[q['sql'] for q in limit_queries]}"
+    assert limit_queries[0]["error"] is not None, "First LIMIT query should have failed"
+    assert limit_queries[1]["error"] is None, "Retry LIMIT query should have succeeded"
